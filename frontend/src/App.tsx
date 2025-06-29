@@ -1,17 +1,62 @@
-import {useEffect, useState} from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import {useEffect, useState, useRef} from 'react';
+import reactLogo from './assets/react.svg';
+import viteLogo from './assets/vite.svg';
+import './App.css';
+
+async function addCount() {
+
+    try {
+        fetch('http://localhost:8000/plusplus')
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Server error");
+                }
+            })
+    } catch (err) {
+        console.error("Failed to increment:", err);
+    }
+
+}
 
 function App() {
-    const [count, setCount] = useState(0)
-    const [message, setMessage] = useState(0)
+    const [count, setCount] = useState(0);
+    const [message, setMessage] = useState({});
+
+    const hasIncremented = useRef(false);
+
+    // Fetch message from backend on mount
+    useEffect(() => {
+        fetch('http://localhost:8000/')
+            .then(response => response.json())
+            .then(data => setMessage(data));
+    }, []);
 
     useEffect(() => {
-        fetch('http://localhost:80/')
-          .then(response => response.json())
-          .then(data => setMessage(data.Hello));
-        }, []);
+        if (hasIncremented.current) return;
+        hasIncremented.current = true;
+
+        addCount()
+
+    }, []);
+
+    useEffect(() => {
+        // Immediate fetch when component mounts
+        const fetchCount = () => {
+            fetch('http://localhost:8000/getcount')
+                .then(response => response.json())
+                .then(data => setCount(data.count))
+                .catch(error => console.error("Error fetching count:", error));
+        };
+
+        // Run immediately on mount
+        fetchCount();
+
+        // Set interval to fetch data every 5 seconds
+        const intervalId = setInterval(fetchCount, 5000); // Run every 5 seconds
+
+        // Cleanup interval on unmount
+        return () => clearInterval(intervalId);
+    }, []); 
 
     return (
         <>
@@ -25,27 +70,18 @@ function App() {
             </div>
             <h1>Vite + React</h1>
             <div className="card">
-                <button onClick={() => setCount((count) => count + 1)}>
-                    count is {count}
-                </button>
+                Current Visits: {count}
                 <p>
-                    Edit <code>src/App.tsx</code> and save to test HMR a
+                    Edit <code>src/App.jsx</code> and save to test HMR
                 </p>
             </div>
-            <p className="read-the-docs">
-                Click on the Vite and React logos to learn more
-            </p>
             <div>
                 <header>
-                    <h1>Hello World from React!</h1>
-                    <h2>Message from API: {message}</h2>
-                    <h2>MongoDB Status: {message}</h2>
-                </header>
-                <header>
+                    <h2>Message from MongoDB via FastAPI: I &lt;3 {message.value}</h2>
                 </header>
             </div>
         </>
-    )
+    );
 }
 
-export default App
+export default App;
